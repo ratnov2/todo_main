@@ -6,13 +6,13 @@ on:
       - main
       - frontend
       - backend
-      - telegram_bot
+      - gateway
   workflow_dispatch: # возможность запускать вручную
 
 env:
   DOMAIN: ${{ secrets.DOMAIN }}
   GIT_USER: ${{ secrets.GIT_USER }}
-  GIT_TOKEN: ${{ secrets.CI_GITLAB_TOKEN }}
+  GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
@@ -20,10 +20,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository with submodules
         uses: actions/checkout@v3
         with:
-          submodules: recursive
+          submodules: recursive # подтягивает gateway, backend, frontend, main
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
@@ -34,25 +34,21 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: Clone repos
-        run: |
-          git clone --branch main https://${{ env.GIT_USER }}:${{ env.GIT_TOKEN }}@gitlab.com/entergen/media/representation/frontend.git /tmp/frontend
-          git clone --branch main https://${{ env.GIT_USER }}:${{ env.GIT_TOKEN }}@gitlab.com/entergen/media/representation/gateway.git /tmp/gateway
-          git clone --branch main https://${{ env.GIT_USER }}:${{ env.GIT_TOKEN }}@gitlab.com/entergen/media/representation/backend.git /tmp/backend
-          git clone --branch main https://${{ env.GIT_USER }}:${{ env.GIT_TOKEN }}@gitlab.com/entergen/media/representation/telegram_bot.git /tmp/telegram_bot
-          ls -R /tmp
-
-      - name: Build and push frontend
-        run: docker build --platform linux/amd64 -t kaka22897/entergen_frontend:latest -f /tmp/frontend/Dockerfile /tmp/frontend && docker push kaka22897/entergen_frontend:latest
-
+      # Build & Push образы из подмодулей
       - name: Build and push gateway
-        run: docker build --platform linux/amd64 -t kaka22897/entergen_gateway:latest -f /tmp/gateway/Dockerfile /tmp/gateway && docker push kaka22897/entergen_gateway:latest
+        run: |
+          docker build --platform linux/amd64 -t kaka22897/todo_gateway:latest -f gateway/Dockerfile gateway
+          docker push kaka22897/todo_gateway:latest
 
       - name: Build and push backend
-        run: docker build --platform linux/amd64 -t kaka22897/entergen_backend:latest -f /tmp/backend/Dockerfile /tmp/backend && docker push kaka22897/entergen_backend:latest
+        run: |
+          docker build --platform linux/amd64 -t kaka22897/todo_backend:latest -f backend/Dockerfile backend
+          docker push kaka22897/todo_backend:latest
 
-      - name: Build and push telegram_bot
-        run: docker build --platform linux/amd64 -t kaka22897/entergen_telegram_bot:latest -f /tmp/telegram_bot/Dockerfile /tmp/telegram_bot && docker push kaka22897/entergen_telegram_bot:latest
+      - name: Build and push frontend
+        run: |
+          docker build --platform linux/amd64 -t kaka22897/todo_frontend:latest -f frontend/Dockerfile frontend
+          docker push kaka22897/todo_frontend:latest
 
   deploy:
     needs: build
