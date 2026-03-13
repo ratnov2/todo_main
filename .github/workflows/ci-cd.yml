@@ -28,6 +28,7 @@ jobs:
         with:
           submodules: recursive # подтягивает gateway, backend, frontend, main
           fetch-depth: 0
+          token: ${{ secrets.GIT_TOKEN }}
 
       - name: List repository files
         run: ls -R
